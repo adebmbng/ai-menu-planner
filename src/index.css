@@ -1,0 +1,272 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure Heroicons render properly */
+svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* App globals */
+:root {
+  color-scheme: light;
+}
+
+/* Modern design with actual CSS */
+body {
+  background: linear-gradient(135deg, rgb(248 250 252) 0%, rgb(239 246 255) 100%);
+  color: rgb(17 24 39);
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animation classes */
+.animate-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.zoom-in-95 {
+  animation: zoomIn 0.2s ease-out;
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Component styles */
+.draggable {
+  cursor: grab;
+  transform: translateZ(0);
+  transition: all 200ms ease;
+}
+
+.draggable:active {
+  cursor: grabbing;
+}
+
+.draggable:hover {
+  transform: scale(1.02) translateZ(0);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.draggable.dragging {
+  transform: scale(1.05) rotate(3deg) translateZ(0);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  z-index: 50;
+  position: relative;
+}
+
+.drop-zone {
+  border: 2px dashed transparent;
+  transition: all 200ms ease;
+}
+
+.drop-zone.drag-over {
+  border-color: rgb(96 165 250);
+  background-color: rgb(239 246 255);
+  box-shadow: 0 0 0 2px rgb(147 197 253);
+  animation: slideInUp 0.2s ease-out;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.modern-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 200ms ease;
+  border: none;
+  cursor: pointer;
+}
+
+.modern-button-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 200ms ease;
+  border: none;
+  cursor: pointer;
+}
+
+.modern-button-xs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  transition: all 200ms ease;
+  border: none;
+  cursor: pointer;
+}
+
+.modern-button:focus-visible,
+.modern-button-sm:focus-visible,
+.modern-button-xs:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(59 130 246), 0 0 0 4px rgb(147 197 253);
+}
+
+.modern-button:disabled,
+.modern-button-sm:disabled,
+.modern-button-xs:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.modern-button-primary,
+.modern-button-primary-sm,
+.modern-button-primary-xs {
+  background: linear-gradient(135deg, rgb(37 99 235) 0%, rgb(29 78 216) 100%);
+  color: white;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.modern-button-primary:hover,
+.modern-button-primary-sm:hover,
+.modern-button-primary-xs:hover {
+  background: linear-gradient(135deg, rgb(29 78 216) 0%, rgb(30 64 175) 100%);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.modern-button-primary:active,
+.modern-button-primary-sm:active,
+.modern-button-primary-xs:active {
+  transform: scale(0.95);
+}
+
+.modern-button-secondary,
+.modern-button-secondary-sm,
+.modern-button-secondary-xs {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  color: rgb(55 65 81);
+  border: 1px solid rgb(229 231 235);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.modern-button-secondary:hover,
+.modern-button-secondary-sm:hover,
+.modern-button-secondary-xs:hover {
+  background: white;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.modern-button-secondary:active,
+.modern-button-secondary-sm:active,
+.modern-button-secondary-xs:active {
+  transform: scale(0.95);
+}
+
+/* Button size + variant combinations for easier use */
+.modern-button-primary-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 0.375rem;
+}
+
+.modern-button-primary-xs {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 0.25rem;
+  font-weight: 400;
+}
+
+.modern-button-secondary-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 0.375rem;
+}
+
+.modern-button-secondary-xs {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 0.25rem;
+  font-weight: 400;
+}
+
+.modern-input {
+  display: flex;
+  height: 2.5rem;
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(209 213 219);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  transition: all 200ms ease;
+}
+
+.modern-input::placeholder {
+  color: rgb(156 163 175);
+}
+
+.modern-input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(59 130 246), 0 0 0 4px rgb(147 197 253);
+}
+
+.modern-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Additional utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
