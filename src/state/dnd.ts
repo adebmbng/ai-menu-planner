@@ -3,7 +3,7 @@ import { create } from 'zustand'
 interface DragState {
     activeId: string | null
     draggedItem: {
-        recipeId: string
+        recipeId?: string
         title: string
         source: 'library' | 'meal'
         sourceDate?: string

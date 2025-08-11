@@ -6,9 +6,10 @@ interface ModalProps {
     title?: string
     onClose: () => void
     children: ReactNode
+    maxWidth?: string
 }
 
-export function Modal({ open, title, onClose, children }: ModalProps) {
+export function Modal({ open, title, onClose, children, maxWidth = "max-w-lg" }: ModalProps) {
     if (!open) return null
 
     return (
@@ -21,7 +22,7 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
                 />
 
                 {/* Modal content */}
-                <div className="relative glass-card rounded-2xl shadow-2xl max-w-lg w-full mx-4 animate-in zoom-in-95 fade-in duration-200">
+                <div className={`relative glass-card rounded-2xl shadow-2xl ${maxWidth} w-full mx-4 animate-in zoom-in-95 fade-in duration-200`}>
                     {/* Header */}
                     {title && (
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200/50">

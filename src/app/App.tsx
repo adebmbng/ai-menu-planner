@@ -1,15 +1,28 @@
-import { DndContext, DragOverlay } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { WeeklyPlanner } from '@/features/menu/WeeklyPlanner'
 import { RecipeLibrary } from '@/features/recipes/RecipeLibrary'
+import { RecipeDetailModal } from '@/features/recipes/RecipeDetailModal'
 import { ShoppingListDrawer } from '@/features/shopping/ShoppingListDrawer'
 import { PlusCircleIcon, ShoppingCartIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import { useDragStore } from '@/state/dnd'
 import { useUIStore } from '@/state/ui'
+import { useMenus } from '@/hooks/useMenus'
+import type { Recipe } from '@/types/menu'
 
 export default function App() {
     const { isShoppingListOpen, setShoppingListOpen, setRecipeModalOpen } = useUIStore()
     const { draggedItem, setActiveId, setDraggedItem, clearDrag } = useDragStore()
+    const { recipeMap, assignRecipeToDay } = useMenus()
+
+    // Configure sensors to prevent accidental drags on click
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8, // Require 8px of movement before drag starts
+            },
+        })
+    )
 
     const handleDragStart = (event: DragStartEvent) => {
         const { active } = event
@@ -18,7 +31,7 @@ export default function App() {
         // Set dragged item based on the active element's data
         if (active.data?.current) {
             setDraggedItem(active.data.current as {
-                recipeId: string
+                recipeId?: string
                 title: string
                 source: 'library' | 'meal'
                 sourceDate?: string
@@ -33,7 +46,8 @@ export default function App() {
         if (over && active.data?.current && over.data?.current) {
             const draggedData = active.data.current as {
                 type: string
-                recipeId: string
+                recipeId?: string
+                recipe?: Recipe
                 title: string
                 source: 'library' | 'meal'
                 sourceDate?: string
@@ -47,27 +61,22 @@ export default function App() {
 
             // Handle dropping a recipe from library to a day
             if (draggedData.source === 'library' && dropData.type === 'day' && dropData.date) {
-                // Add the recipe title to that day - this would integrate with your meal planning API
-                console.log('🎯 Add recipe to day:', {
-                    recipeId: draggedData.recipeId,
-                    title: draggedData.title,
-                    date: dropData.date
-                })
-
-                // In a real implementation, you would call your API here to add the meal
-                // For demo purposes, this would trigger a mutation to add the meal
+                const recipeId = draggedData.recipeId
+                if (recipeId) {
+                    const recipe = recipeMap.get(recipeId)
+                    if (recipe) {
+                        assignRecipeToDay(dropData.date, recipe)
+                    }
+                }
             }
 
             // Handle moving meals between days or reordering within same day
             if (draggedData.source === 'meal' && dropData.type === 'day') {
-                console.log('🔄 Move meal:', {
-                    from: draggedData.sourceDate,
-                    to: dropData.date,
-                    recipe: draggedData.title,
-                    sourceKey: draggedData.sourceKey
-                })
-
-                // This would call your onMove function from the WeeklyPlanner
+                // This is already handled by the WeeklyPlanner component's optimistic updates
+                // The meal item drag contains the full recipe object
+                if (draggedData.recipe && dropData.date && draggedData.sourceDate !== dropData.date) {
+                    assignRecipeToDay(dropData.date, draggedData.recipe)
+                }
             }
         }
 
@@ -75,7 +84,7 @@ export default function App() {
     }
 
     return (
-        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="min-h-screen">
                 {/* Modern gradient header with glassmorphism */}
                 <header className="sticky top-0 z-40 border-b border-white/20 glass-card">
@@ -154,6 +163,7 @@ export default function App() {
                 </DragOverlay>
 
                 <ShoppingListDrawer open={isShoppingListOpen} onOpenChange={setShoppingListOpen} />
+                <RecipeDetailModal />
             </div>
         </DndContext>
     )

@@ -1,45 +1,41 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDraggable } from '@dnd-kit/core'
 import { Modal } from '@/components/Modal'
-import { apiGet, apiPost } from '@/api/client'
-import { MagnifyingGlassIcon, PlusIcon, BookOpenIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, PlusIcon, BookOpenIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 import { useUIStore } from '@/state/ui'
-
-interface RecipeDTO {
-    id: string
-    title: string
-    raw_text: string
-    tags?: string[]
-}
+import { useMenus } from '../../hooks/useMenus'
+import { ingestRecipe } from '../../api/menus'
+import type { Recipe } from '../../types/menu'
 
 export function RecipeLibrary() {
-    const qc = useQueryClient()
     const { searchQuery, setSearchQuery, isRecipeModalOpen, setRecipeModalOpen } = useUIStore()
+    const { recipeMap, loadRecipes } = useMenus()
     const [rawText, setRawText] = useState('')
+    const [isIngesting, setIsIngesting] = useState(false)
 
-    const { data: recipes = [] } = useQuery({
-        queryKey: ['recipes', searchQuery],
-        queryFn: async (): Promise<RecipeDTO[]> => {
-            let endpoint = '/api/v1/meal-planner/recipes'
-            if (searchQuery) {
-                endpoint += `?q=${encodeURIComponent(searchQuery)}`
-            }
-            return await apiGet<RecipeDTO[]>(endpoint)
-        },
-        staleTime: 30_000,
+    // Convert recipe map to array for display
+    const recipes = Array.from(recipeMap.values()).filter(recipe => {
+        if (!searchQuery) return true
+        return recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            recipe.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
     })
 
-    const ingest = useMutation({
-        mutationFn: async (text: string) => {
-            return await apiPost<RecipeDTO>('/api/v1/meal-planner/recipes/ingest', { raw_text: text, tags: [] })
-        },
-        onSuccess: () => {
+    const handleIngestRecipe = async () => {
+        if (!rawText.trim()) return
+
+        setIsIngesting(true)
+        try {
+            await ingestRecipe(rawText.trim())
+            await loadRecipes() // Reload recipes to get the new one
             setRecipeModalOpen(false)
             setRawText('')
-            qc.invalidateQueries({ queryKey: ['recipes'] })
-        },
-    })
+        } catch (error) {
+            console.error('Failed to add recipe:', error)
+            // TODO: Show error toast
+        } finally {
+            setIsIngesting(false)
+        }
+    }
 
     return (
         <>
@@ -115,10 +111,10 @@ export function RecipeLibrary() {
                         </button>
                         <button
                             className="modern-button-primary-xs"
-                            onClick={() => rawText.trim() && ingest.mutate(rawText.trim())}
-                            disabled={!rawText.trim() || ingest.isPending}
+                            onClick={handleIngestRecipe}
+                            disabled={!rawText.trim() || isIngesting}
                         >
-                            {ingest.isPending ? 'Adding...' : 'Add Recipe'}
+                            {isIngesting ? 'Adding...' : 'Add Recipe'}
                         </button>
                     </div>
                 </div>
@@ -128,10 +124,12 @@ export function RecipeLibrary() {
 }
 
 interface RecipeCardProps {
-    recipe: RecipeDTO
+    recipe: Recipe
 }
 
 function RecipeCard({ recipe }: RecipeCardProps) {
+    const { setRecipeDetailModalOpen, setSelectedRecipeId } = useUIStore()
+
     const {
         attributes,
         listeners,
@@ -152,6 +150,13 @@ function RecipeCard({ recipe }: RecipeCardProps) {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
     } : undefined
 
+    const handleTitleClick = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        e.preventDefault()
+        setSelectedRecipeId(recipe.id)
+        setRecipeDetailModalOpen(true)
+    }
+
     return (
         <div
             ref={setNodeRef}
@@ -165,13 +170,20 @@ function RecipeCard({ recipe }: RecipeCardProps) {
         >
             <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0 pr-2">
-                    <h4 className="font-medium text-gray-900 text-sm truncate mb-1">{recipe.title}</h4>
+                    <h4
+                        className="font-medium text-gray-900 text-sm truncate mb-1 cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1"
+                        onClick={handleTitleClick}
+                        title="Click to view recipe details"
+                    >
+                        {recipe.title}
+                        <InformationCircleIcon className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                    </h4>
                     <p className="text-xs text-gray-500 line-clamp-2 mb-2">
                         {recipe.raw_text.slice(0, 80)}...
                     </p>
                     {recipe.tags && recipe.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                            {recipe.tags.slice(0, 2).map((tag) => (
+                            {recipe.tags.slice(0, 2).map((tag: string) => (
                                 <span
                                     key={tag}
                                     className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs bg-blue-50 text-blue-600 border border-blue-200"
