@@ -3,7 +3,8 @@ import { useMenuStore } from '../state/menu';
 import {
     getOrCreateMenuWeek,
     updateMenuDay,
-    getRecipes
+    getRecipes,
+    removeRecipeFromDay as apiRemoveRecipeFromDay
 } from '../api/menus';
 import {
     fromMenuWeekDTO,
@@ -129,21 +130,19 @@ export function useMenus() {
         removeMealFromDay(date, recipeId);
 
         try {
-            // Get the fresh state after optimistic update
-            const freshWeek = useMenuStore.getState().currentWeek;
-            const updatedDay = freshWeek?.days.find(d => d.date === date);
-            if (!updatedDay) return;
+            // Call the delete API
+            await apiRemoveRecipeFromDay(currentWeekStart, date, recipeId);
 
-            // Send to API
-            const request = toUpdateMenuDayRequest(updatedDay);
-            await updateMenuDay(currentWeekStart, request);
+            // Refresh the menu week to get the complete updated data
+            const updatedWeek = await getOrCreateMenuWeek(currentWeekStart);
+            setCurrentWeek(fromMenuWeekDTO(updatedWeek));
             setError(null);
         } catch (err) {
             // Rollback optimistic update
             addMealToDay(date, recipe);
             setError(err instanceof Error ? err.message : 'Failed to remove recipe');
         }
-    }, [currentWeekStart, recipeMap, removeMealFromDay, addMealToDay, setError]);
+    }, [currentWeekStart, recipeMap, removeMealFromDay, addMealToDay, setCurrentWeek, setError]);
 
     /**
      * Clear all meals from a day

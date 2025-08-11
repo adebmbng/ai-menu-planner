@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from './client';
+import { apiGet, apiPost, apiPut, apiDelete } from './client';
 import type {
     MenuWeekDTO,
     CreateMenuRequest,
@@ -89,4 +89,15 @@ export async function ingestRecipe(rawText: string, tags: string[] = []): Promis
         raw_text: rawText,
         tags
     });
+}
+
+/**
+ * Remove a recipe from a specific day in a menu week
+ */
+export async function removeRecipeFromDay(
+    weekStart: string,
+    date: string,
+    recipeId: string
+): Promise<MenuWeekDTO> {
+    return apiDelete(`${MENUS_BASE}/weeks/${weekStart}/days/${date}/recipes/${recipeId}`);
 }

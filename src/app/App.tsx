@@ -35,6 +35,7 @@ export default function App() {
                 title: string
                 source: 'library' | 'meal'
                 sourceDate?: string
+                sourceIndex?: number
                 sourceKey?: string
             })
         }
@@ -51,6 +52,7 @@ export default function App() {
                 title: string
                 source: 'library' | 'meal'
                 sourceDate?: string
+                sourceIndex?: number
                 sourceKey?: string
             }
 

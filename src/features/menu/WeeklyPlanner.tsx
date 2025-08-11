@@ -161,7 +161,7 @@ interface DayColumnProps {
     date: string;
     meals: Recipe[];
     onAssignRecipe: (date: string, recipe: Recipe) => void;
-    onRemoveRecipe: (date: string, recipeId: string) => void;
+    onRemoveRecipe: (date: string, recipeId: string) => Promise<void>;
     onClearDay: (date: string) => void;
 }
 
@@ -188,35 +188,35 @@ function DayColumn({ date, meals, onRemoveRecipe }: DayColumnProps) {
         >
             {/* Meals list */}
             <div className="space-y-2 mb-4">
-                <SortableContext items={meals.map(recipe => recipe.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={meals.map((_recipe, index) => `meal-${date}-${index}`)} strategy={verticalListSortingStrategy}>
                     {meals.map((recipe, index) => (
                         <MealItem
-                            key={recipe.id}
+                            key={`meal-${date}-${index}`}
                             recipe={recipe}
                             date={date}
                             index={index}
-                            onRemove={() => onRemoveRecipe(date, recipe.id)}
+                            onRemove={async () => await onRemoveRecipe(date, recipe.id)}
                         />
                     ))}
                 </SortableContext>
 
                 {meals.length === 0 && (
-                    <div className="flex items-center justify-center h-32 border-2 border-dashed border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-center h-36 border-2 border-dashed border-gray-300/60 rounded-xl bg-gray-50/30">
                         <div className="text-center">
-                            <div className="text-gray-400 text-xs mb-1">Drop recipe here</div>
-                            <div className="text-gray-300 text-xs">or add below</div>
+                            <div className="text-gray-500 text-caption font-medium mb-1">Drop recipe here</div>
+                            <div className="text-gray-400 text-xs">or add below</div>
                         </div>
                     </div>
                 )}
             </div>
 
             {/* Quick add meal input */}
-            <div className="space-y-2 mt-auto">
+            <div className="space-y-3 mt-auto">
                 <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Quick add meal..."
-                    className="w-full text-xs p-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full text-body p-3 border border-gray-300/60 rounded-lg bg-white/80 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder-gray-500"
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && input.trim()) {
                             // For now, just show a placeholder for quick entry
@@ -226,7 +226,7 @@ function DayColumn({ date, meals, onRemoveRecipe }: DayColumnProps) {
                         }
                     }}
                 />
-                <div className="text-xs text-gray-400 text-center">
+                <div className="text-caption text-gray-500 text-center">
                     Drag recipes from library or type to quick-add
                 </div>
             </div>
@@ -238,11 +238,14 @@ interface MealItemProps {
     recipe: Recipe;
     date: string;
     index: number;
-    onRemove: () => void;
+    onRemove: () => Promise<void>;
 }
 
-function MealItem({ recipe, onRemove }: MealItemProps) {
+function MealItem({ recipe, date, index, onRemove }: MealItemProps) {
     const { setRecipeDetailModalOpen, setSelectedRecipeId } = useUIStore()
+    const [isDeleting, setIsDeleting] = useState(false)
+
+    const uniqueId = `meal-${date}-${index}`
 
     const {
         attributes,
@@ -252,11 +255,13 @@ function MealItem({ recipe, onRemove }: MealItemProps) {
         transition,
         isDragging,
     } = useSortable({
-        id: recipe.id,
+        id: uniqueId,
         data: {
             type: 'meal',
             recipe,
             source: 'meal' as const,
+            sourceDate: date,
+            sourceIndex: index,
         },
     });
 
@@ -272,54 +277,80 @@ function MealItem({ recipe, onRemove }: MealItemProps) {
         setRecipeDetailModalOpen(true)
     }
 
+    const handleRemove = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsDeleting(true);
+        try {
+            await onRemove();
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+
     return (
         <div
             ref={setNodeRef}
             style={style}
             className={`
-        group relative bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg p-3 transition-all duration-200
-        ${isDragging ? 'draggable dragging shadow-lg z-50' : 'draggable hover:shadow-sm hover:border-blue-300'}
+        group relative recipe-card rounded-xl p-4 transition-all duration-200 cursor-pointer
+        ${isDragging ? 'draggable dragging shadow-lg z-50 scale-105' : 'draggable hover:shadow-md'}
+        ${isDeleting ? 'opacity-50 pointer-events-none' : ''}
       `}
             {...attributes}
             {...listeners}
         >
-            <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
+            {/* Delete button - positioned absolutely in top-right */}
+            <button
+                className={`
+          absolute top-3 right-3 p-1.5 rounded-lg transition-all duration-200 flex-shrink-0 z-10
+          ${isDeleting
+                        ? 'bg-red-100 text-red-400 cursor-not-allowed'
+                        : 'opacity-0 group-hover:opacity-100 hover:bg-red-100 text-red-500'
+                    }
+        `}
+                onClick={handleRemove}
+                disabled={isDeleting}
+                title={isDeleting ? "Removing..." : "Remove recipe"}
+            >
+                <XMarkIcon className="h-4 w-4" />
+            </button>
+
+            <div className="pr-8"> {/* Add right padding to avoid overlap with delete button */}
+                <div className="mb-2">
                     <div
-                        className="text-sm font-medium text-gray-900 truncate cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1"
+                        className="text-base font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors flex items-start gap-2 leading-snug"
                         onClick={handleTitleClick}
                         title="Click to view recipe details"
                     >
-                        {recipe.title}
-                        <InformationCircleIcon className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                        <span className="break-words flex-1">{recipe.title}</span>
+                        <InformationCircleIcon className="h-4 w-4 opacity-0 group-hover:opacity-60 transition-opacity flex-shrink-0 mt-0.5 text-blue-500" />
                     </div>
-                    {recipe.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                            {recipe.tags.slice(0, 2).map(tag => (
-                                <span
-                                    key={tag}
-                                    className="inline-block px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded"
-                                >
-                                    {tag}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-                    {recipe.time_minutes && (
-                        <div className="text-xs text-gray-500 mt-1">
-                            {recipe.time_minutes} min
-                        </div>
-                    )}
                 </div>
-                <button
-                    className="opacity-0 group-hover:opacity-100 ml-2 p-0.5 rounded hover:bg-red-100 text-red-500 transition-all duration-200"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onRemove();
-                    }}
-                >
-                    <XMarkIcon className="h-4 w-4" />
-                </button>
+
+                {recipe.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                        {recipe.tags.slice(0, 3).map(tag => (
+                            <span
+                                key={tag}
+                                className="inline-block px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/60 rounded-md"
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                        {recipe.tags.length > 3 && (
+                            <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 rounded-md">
+                                +{recipe.tags.length - 3}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {recipe.time_minutes && (
+                    <div className="flex items-center gap-1.5 text-caption text-gray-600">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                        <span className="font-medium">{recipe.time_minutes} minutes</span>
+                    </div>
+                )}
             </div>
         </div>
     );

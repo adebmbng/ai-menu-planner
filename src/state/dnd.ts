@@ -7,6 +7,7 @@ interface DragState {
         title: string
         source: 'library' | 'meal'
         sourceDate?: string
+        sourceIndex?: number
         sourceKey?: string
     } | null
     setActiveId: (id: string | null) => void
