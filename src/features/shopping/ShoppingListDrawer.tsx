@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiPost, apiGet } from '@/api/client'
 import {
@@ -24,15 +24,30 @@ interface ShoppingListDTO {
     status: string
 }
 
-export function ShoppingListDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+export function ShoppingListDrawer({
+    open,
+    onOpenChange,
+    weekStart
+}: {
+    open: boolean;
+    onOpenChange: (v: boolean) => void;
+    weekStart?: string;
+}) {
     const [weekId, setWeekId] = useState('')
     const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
+
+    // Auto-populate and trigger generation when weekStart is provided
+    useEffect(() => {
+        if (weekStart && open && weekStart !== weekId) {
+            setWeekId(weekStart)
+        }
+    }, [weekStart, open, weekId])
 
     const { data } = useQuery({
         enabled: !!weekId,
         queryKey: ['shopping-list', weekId],
         queryFn: async (): Promise<ShoppingListDTO> => {
-            const generated: ShoppingListDTO = await apiPost('/api/v1/meal-planner/shopping-lists/generate', { week_id: weekId })
+            const generated: ShoppingListDTO = await apiPost('/api/v1/meal-planner/shopping-lists/generate', { week_start: weekId })
             return await apiGet<ShoppingListDTO>(`/api/v1/meal-planner/shopping-lists/${generated.id}`)
         },
         staleTime: 0,
@@ -51,18 +66,82 @@ export function ShoppingListDrawer({ open, onOpenChange }: { open: boolean; onOp
     const copyToClipboard = () => {
         if (!data?.items) return
 
-        const text = data.items
-            .map((item, index) => {
-                const checked = checkedItems.has(index) ? '✅' : '⬜'
+        // Format week start date for display
+        const weekStart = weekId ? new Date(weekId).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        }) : 'Current Week'
+
+        const weekEnd = weekId ? new Date(new Date(weekId).getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric'
+        }) : ''
+
+        // Group items by aisle
+        const groupedItems = data.items.reduce((groups: Record<string, typeof data.items>, item) => {
+            const aisle = item.aisle || 'Other'
+            if (!groups[aisle]) {
+                groups[aisle] = []
+            }
+            groups[aisle].push(item)
+            return groups
+        }, {})
+
+        // Define aisle emoji mapping
+        const aisleEmojis: Record<string, string> = {
+            'Produce': '🥬',
+            'Fruits': '🍎',
+            'Vegetables': '🥕',
+            'Dairy': '🥛',
+            'Meat': '🍖',
+            'Seafood': '🐟',
+            'Bakery': '🍞',
+            'Frozen': '🧊',
+            'Pantry': '🏺',
+            'Grains': '🌾',
+            'Canned': '🥫',
+            'Spices': '🧂',
+            'Beverages': '🥤',
+            'Snacks': '🍿',
+            'Deli': '🧀',
+            'Other': '🛒'
+        }
+
+        // Build the shopping list text
+        let text = `🛒 Shopping List\nWeek of ${weekStart}${weekEnd ? ` - ${weekEnd}` : ''}\n────────────────────────\n\n`
+
+        // Sort aisles to put common ones first
+        const aisleOrder = ['Produce', 'Fruits', 'Vegetables', 'Meat', 'Seafood', 'Dairy', 'Frozen', 'Bakery', 'Pantry', 'Grains', 'Canned', 'Beverages', 'Snacks', 'Deli', 'Spices', 'Other']
+        const sortedAisles = Object.keys(groupedItems).sort((a, b) => {
+            const indexA = aisleOrder.indexOf(a)
+            const indexB = aisleOrder.indexOf(b)
+            if (indexA === -1 && indexB === -1) return a.localeCompare(b)
+            if (indexA === -1) return 1
+            if (indexB === -1) return -1
+            return indexA - indexB
+        })
+
+        sortedAisles.forEach((aisle, aisleIndex) => {
+            const emoji = aisleEmojis[aisle] || '🛒'
+            text += `${emoji} ${aisle.toUpperCase()}\n`
+
+            groupedItems[aisle].forEach(item => {
                 const qty = item.qty ? `${item.qty} ` : ''
                 const unit = item.unit ? `${item.unit} ` : ''
-                const aisle = item.aisle ? ` (${item.aisle})` : ''
                 const notes = item.notes ? ` - ${item.notes}` : ''
-                return `${checked} ${qty}${unit}${item.name}${aisle}${notes}`
+                text += `• ${qty}${unit}${item.name}${notes}\n`
             })
-            .join('\n')
 
-        navigator.clipboard.writeText(`Shopping List\n\n${text}`)
+            // Add spacing between sections (except last one)
+            if (aisleIndex < sortedAisles.length - 1) {
+                text += '\n'
+            }
+        })
+
+        text += `\n────────────────────────\nGenerated by AI Menu Planner\n${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+
+        navigator.clipboard.writeText(text)
     }
 
     if (!open) return null
@@ -93,15 +172,15 @@ export function ShoppingListDrawer({ open, onOpenChange }: { open: boolean; onOp
                     </button>
                 </div>
 
-                {/* Week ID input */}
+                {/* Week Start input */}
                 <div className="p-6 border-b border-gray-200/50">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Week ID
+                        Week Start Date
                     </label>
                     <div className="flex gap-3">
                         <input
                             className="modern-input flex-1 text-sm"
-                            placeholder="Enter week ID (e.g., week_2025-08-11)"
+                            placeholder="Enter week start date (e.g., 2025-08-11)"
                             value={weekId}
                             onChange={(e) => setWeekId(e.target.value)}
                         />
@@ -126,7 +205,7 @@ export function ShoppingListDrawer({ open, onOpenChange }: { open: boolean; onOp
                                 <ShoppingCartIcon className="h-8 w-8 text-gray-400" />
                             </div>
                             <h4 className="text-lg font-medium text-gray-900 mb-2">No shopping list loaded</h4>
-                            <p className="text-gray-500">Enter a week ID above to generate your shopping list</p>
+                            <p className="text-gray-500">Enter a week start date above to generate your shopping list</p>
                         </div>
                     )}
 
@@ -148,7 +227,7 @@ export function ShoppingListDrawer({ open, onOpenChange }: { open: boolean; onOp
                                     onClick={copyToClipboard}
                                 >
                                     <DocumentDuplicateIcon className="h-3 w-3" />
-                                    Copy
+                                    Share List
                                 </button>
                                 <button
                                     className="modern-button-secondary-xs gap-1.5 flex-1"

@@ -4,13 +4,15 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, XMarkIcon, InformationCircleIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
 import { useMenus } from '../../hooks/useMenus';
 import { useUIStore } from '../../state/ui';
+import { ShoppingListDrawer } from '../shopping/ShoppingListDrawer';
 import type { Recipe } from '../../types/menu';
 
 export function WeeklyPlanner() {
     const hasInitialized = useRef(false);
+    const [shoppingListOpen, setShoppingListOpen] = useState(false);
     const {
         currentWeek,
         currentWeekStart,
@@ -83,6 +85,13 @@ export function WeeklyPlanner() {
 
                     <div className="flex items-center gap-2">
                         <button
+                            className="modern-button-primary-sm gap-2"
+                            onClick={() => setShoppingListOpen(true)}
+                        >
+                            <ShoppingCartIcon className="h-4 w-4" />
+                            Generate Shopping List
+                        </button>
+                        <button
                             className="modern-button-secondary-sm"
                             onClick={goToPreviousWeek}
                         >
@@ -153,6 +162,13 @@ export function WeeklyPlanner() {
                     ))}
                 </div>
             </div>
+
+            {/* Shopping List Drawer */}
+            <ShoppingListDrawer
+                open={shoppingListOpen}
+                onOpenChange={setShoppingListOpen}
+                weekStart={currentWeekStart || ''}
+            />
         </div>
     );
 }
