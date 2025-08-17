@@ -99,22 +99,14 @@ export function toUpdateMenuDayRequest(day: MenuDay): UpdateMenuDayRequest {
     };
 }
 
+// Import timezone-aware date utilities
+import { getWeekStartInTimezone, getWeekDaysInTimezone } from '../utils/dateUtils';
+
 // Helper functions
 export function getWeekStart(date: Date): string {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
-    d.setDate(diff);
-    return d.toISOString().split('T')[0];
+    return getWeekStartInTimezone(date);
 }
 
 export function getWeekDays(weekStart: string): string[] {
-    const days = [];
-    const start = new Date(weekStart);
-    for (let i = 0; i < 7; i++) {
-        const day = new Date(start);
-        day.setDate(start.getDate() + i);
-        days.push(day.toISOString().split('T')[0]);
-    }
-    return days;
+    return getWeekDaysInTimezone(weekStart);
 }

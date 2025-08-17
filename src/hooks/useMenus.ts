@@ -1,18 +1,19 @@
 import { useCallback } from 'react';
-import { useMenuStore } from '../state/menu';
 import {
     getOrCreateMenuWeek,
     updateMenuDay,
+    removeRecipeFromDay as apiRemoveRecipeFromDay,
     getRecipes,
-    removeRecipeFromDay as apiRemoveRecipeFromDay
 } from '../api/menus';
+import { useMenuStore } from '../state/menu';
+import type { Recipe } from '../types/menu';
 import {
     fromMenuWeekDTO,
     toUpdateMenuDayRequest,
     getWeekStart,
     getWeekDays
 } from '../types/menu';
-import type { Recipe } from '../types/menu';
+import { getCurrentDateInTimezone } from '../utils/dateUtils';
 
 /**
  * Hook for managing menu operations
@@ -177,7 +178,7 @@ export function useMenus() {
     }, [loadWeek]);
 
     const goToCurrentWeek = useCallback(() => {
-        const today = new Date();
+        const today = getCurrentDateInTimezone();
         const weekStart = getWeekStart(today);
         loadWeek(weekStart);
     }, [loadWeek]);
